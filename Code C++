@@ -1,0 +1,110 @@
+#include <WiFi.h>
+#include <PubSubClient.h>
+
+// Configurações da rede WiFi
+const char* ssid = "SEU_SSID";
+const char* password = "SUA_SENHA";
+
+// Configurações do broker MQTT
+const char* mqtt_server = "BROKER_IP";
+const int mqtt_port = 1883;
+const char* mqtt_topic_monitor = "energy/monitor";
+const char* mqtt_topic_control = "energy/control";
+
+WiFiClient espClient;
+PubSubClient client(espClient);
+
+// Pinos dos sensores simulados no Wokwi
+const int currentSensorPin = 34; // Sensor de corrente
+const int tempSensorPin = 35;    // Sensor de temperatura
+
+// Função para conexão WiFi
+void setupWiFi() {
+  delay(10);
+  Serial.println("Conectando ao WiFi...");
+  WiFi.begin(ssid, password);
+
+  while (WiFi.status() != WL_CONNECTED) {
+    delay(1000);
+    Serial.print(".");
+  }
+  Serial.println("\nConectado ao WiFi!");
+}
+
+// Função callback MQTT (para mensagens recebidas)
+void mqttCallback(char* topic, byte* payload, unsigned int length) {
+  Serial.print("Mensagem recebida em [");
+  Serial.print(topic);
+  Serial.print("]: ");
+  for (int i = 0; i < length; i++) {
+    Serial.print((char)payload[i]);
+  }
+  Serial.println();
+  
+  // Exemplo: ajuste baseado no controle recebido
+  if (strcmp(topic, mqtt_topic_control) == 0) {
+    int command = atoi((char*)payload);
+    if (command == 1) {
+      Serial.println("Ajustando potência do carregador...");
+    } else if (command == 0) {
+      Serial.println("Desligando carregador...");
+    }
+  }
+}
+
+// Função para reconectar ao MQTT
+void reconnectMQTT() {
+  while (!client.connected()) {
+    Serial.println("Tentando conectar ao MQTT...");
+    if (client.connect("ESP32Client")) {
+      Serial.println("Conectado ao MQTT!");
+      client.subscribe(mqtt_topic_control);
+    } else {
+      Serial.print("Falha na conexão. Código: ");
+      Serial.print(client.state());
+      Serial.println(" Tentando novamente em 5 segundos...");
+      delay(5000);
+    }
+  }
+}
+
+// Função para publicar dados MQTT
+void publishData(float current, float temp) {
+  char payload[50];
+  snprintf(payload, 50, "{\"current\":%.2f,\"temperature\":%.2f}", current, temp);
+  client.publish(mqtt_topic_monitor, payload);
+  Serial.print("Dados publicados: ");
+  Serial.println(payload);
+}
+
+void setup() {
+  Serial.begin(115200);
+  setupWiFi();
+  client.setServer(mqtt_server, mqtt_port);
+  client.setCallback(mqttCallback);
+
+  pinMode(currentSensorPin, INPUT);
+  pinMode(tempSensorPin, INPUT);
+}
+
+void loop() {
+  if (!client.connected()) {
+    reconnectMQTT();
+  }
+  client.loop();
+
+  // Leitura simulada de sensores
+  float current = analogRead(currentSensorPin) * (3.3 / 4095.0); // Conversão de 0-3.3V
+  float temp = analogRead(tempSensorPin) * (3.3 / 4095.0) * 100; // Conversão para °C
+
+  Serial.print("Corrente: ");
+  Serial.print(current);
+  Serial.print(" A | Temperatura: ");
+  Serial.print(temp);
+  Serial.println(" °C");
+
+  // Publicar dados no broker MQTT
+  publishData(current, temp);
+
+  delay(5000); // Enviar dados a cada 5 segundos
+}

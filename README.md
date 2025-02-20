@@ -1,5 +1,5 @@
-# GS.Edge
-Aqui está meu desenvolvimento na matéria de  para a GS Energy Green para FIAP 
+# GlobalSolution.Edge
+O Energy EV é uma solução inovadora voltada para o gerenciamento inteligente de estações de carregamento de veículos elétricos. Utilizando o microcontrolador ESP32, sensores IoT e comunicação MQTT, o sistema monitora o consumo energético em tempo real, ajusta dinamicamente os parâmetros de carregamento e melhora a eficiência das estações. O objetivo é otimizar o uso de energia renovável, reduzir desperdícios e promover um futuro mais sustentável. 
 
 # Energy EV - Gerenciamento Inteligente de Estações de Carregamento de Veículos Elétricos
 
